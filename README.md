@@ -7,7 +7,7 @@
 ![Databricks](https://img.shields.io/badge/Databricks-Free%20Edition-FF3621?style=for-the-badge&logo=databricks&logoColor=white)
 ![PySpark](https://img.shields.io/badge/Python-PySpark-3776AB?style=for-the-badge&logo=python&logoColor=white)
 ![Delta Lake](https://img.shields.io/badge/Delta%20Lake-Medallion-00ADD8?style=for-the-badge)
-![IA](https://img.shields.io/badge/IA-Genie%20Agent%20%2B%20Agentes-8A2BE2?style=for-the-badge)
+![IA](https://img.shields.io/badge/IA-LLM%20%2B%20Genie%20Agent-8A2BE2?style=for-the-badge)
 ![Status IA](https://img.shields.io/badge/Camada%20de%20IA-Em%20andamento-orange?style=for-the-badge)
 ![Custo](https://img.shields.io/badge/Custo-R%24%200-2ea44f?style=for-the-badge)
 
@@ -21,13 +21,13 @@ Em dias de **chuva** ou de **calor intenso**, apps de delivery recomendam comida
 
 Só que IA boa depende de **dado bom**. Um modelo ou um agente não consegue recomendar nada sem dados confiáveis, atualizados e organizados. Este projeto resolve as duas pontas:
 
-- 🏗️ **Engenharia de Dados:** ingestão de duas APIs abertas, tratamento com qualidade de dados, camadas Bronze, Silver e Gold e orquestração diária
-- 🤖 **IA sobre dados governados:** uma camada em linguagem natural, em que qualquer pessoa pergunta "o que recomendar agora na Av. Paulista?" e recebe uma resposta baseada nas tabelas Gold, e não em achismo de modelo
+- 🏗️ **Engenharia de Dados:** ingestão de duas APIs abertas, tratamento com qualidade de dados, camadas Bronze, Silver e Gold e orquestração diária e semanal
+- 🤖 **IA sobre dados governados:** um LLM que explica cada recomendação dentro do pipeline e uma camada em linguagem natural, em que qualquer pessoa pergunta "que tipo de comida é mais indicado agora?" e recebe uma resposta baseada nas tabelas Gold, e não em achismo de modelo
 
 > 🌧️ Chuva e frio → sopas, caldos, massas e comfort food
 > ☀️ Calor intenso → açaí, sorvete, saladas e comidas leves
 
-💡 **A ideia central:** o pipeline entrega o dado pronto e confiável, e a IA conversa em cima dele. Assim a resposta é rastreável até a tabela de origem, o que reduz o risco de a IA inventar informação.
+💡 **A ideia central:** o pipeline entrega o dado pronto e confiável, e a IA trabalha em cima dele. Assim a resposta é rastreável até a tabela de origem, o que reduz o risco de a IA inventar informação.
 
 ---
 
@@ -40,8 +40,10 @@ flowchart LR
   B["🥉 Bronze<br/>JSON bruto em Volume"] --> D["🥈 Silver<br/>Delta limpo<br/>+ Data Quality"]
   D --> E["🥇 Gold<br/>tags de clima, scores<br/>e recomendações"]
   E --> F["📋 recommendations_today"]
-  F --> G["🤖 Camada de IA<br/>Genie Agent + agentes<br/>linguagem natural"]
-  H["⏰ Databricks Jobs<br/>diário + alertas por e-mail"] -.-> B
+  F --> G["✍️ LLM no pipeline<br/>ai_query<br/>recommendations_explained"]
+  F --> H["🤖 Genie Agent<br/>linguagem natural"]
+  G --> H
+  I["⏰ Databricks Jobs<br/>diário + semanal<br/>alertas por e-mail"] -.-> B
 ```
 
 ### 🧱 Camadas (Arquitetura Medalhão)
@@ -50,7 +52,7 @@ flowchart LR
 |---|---|---|
 | 🥉 **Bronze** | Resposta bruta das APIs, sem alteração | JSONs em Volume (`weather/` e `restaurants/`) |
 | 🥈 **Silver** | Dados limpos, tipados, deduplicados e validados | `weather_hourly`, `restaurants` e as tabelas `_rejected` |
-| 🥇 **Gold** | Tags de clima, scores e recomendações | `weather_context`, `dim_afinidade_clima_comida`, `recommendation_scores`, `recommendations_today` |
+| 🥇 **Gold** | Tags de clima, scores, recomendações e explicações | `weather_context`, `dim_afinidade_clima_comida`, `recommendation_scores`, `recommendations_today`, `recommendations_explained` |
 
 ---
 
@@ -62,10 +64,11 @@ flowchart LR
 | 🌤️ API de clima | [Open-Meteo](https://open-meteo.com/) (sem chave, previsão e histórico) |
 | 🍽️ API de restaurantes | [OpenStreetMap via Overpass API](https://overpass-api.de/) (sem chave) |
 | 💾 Armazenamento | Delta Lake + Unity Catalog Volumes |
-| ⚙️ Orquestração | Databricks Jobs (5 tasks em sequência) |
+| ⚙️ Orquestração | Databricks Jobs (job diário com 6 tasks e job semanal com 3 tasks) |
 | 🔔 Monitoramento | Alertas por e-mail (falha e duração) |
 | ✅ Qualidade de dados | PySpark + regras próprias + tabelas de rejeitados |
-| 🤖 IA conversacional | Genie Agent sobre as tabelas Gold (planejado: agente em código e modelo de ML) |
+| ✍️ IA generativa | `ai_query` em batch com `databricks-meta-llama-3-3-70b-instruct` |
+| 💬 IA conversacional | Genie Agent sobre as tabelas Gold (planejado: agente em código e modelo de ML) |
 | 🔀 Versionamento | Git + GitHub (Git folders do Databricks) |
 
 ---
@@ -84,6 +87,8 @@ Weather-Food-Recommendation/
 ├── 📓 10_gold_recommendation_scores  → score base por restaurante e clima
 ├── 📓 11_gold_recommendations_today  → recomendações da hora atual + função recomendar(lat, lon)
 ├── 📓 12_gold_genie_metadata         → descrições das tabelas para o Genie
+├── 📓 13_ai_teste_llm                → teste do endpoint do LLM
+├── 📓 14_ai_recomendacoes_explicadas → explicações em português geradas por LLM (ai_query)
 └── 📄 README.md
 ```
 
@@ -96,10 +101,22 @@ A camada de IA fica **em cima** das tabelas Gold. Ela não substitui o pipeline,
 | Componente | O que faz | Status |
 |---|---|---|
 | 🧠 **Contexto para a IA** | Descrições de tabelas e colunas gravadas no Unity Catalog, para que a IA entenda o significado de cada campo | ✅ Pronto |
+| ✍️ **LLM no pipeline (`ai_query`)** | Escreve, em uma frase, por que cada restaurante combina com o clima de agora. Roda como task do job diário | ✅ Pronto |
 | 💬 **Genie Agent** | Chat em linguagem natural sobre as tabelas Gold: a pergunta vira SQL, roda e volta como tabela ou gráfico | 🔄 Em andamento |
 | 🧪 **Avaliação do agente** | Perguntas de teste (benchmarks) com resposta esperada, para medir a acurácia | 📌 Planejado |
 | 🛠️ **Agente em código** | Agente que usa o Genie e a função `recomendar(lat, lon)` como ferramentas e explica a recomendação em linguagem natural | 📌 Planejado |
-| 📈 **Modelo de ML (V2)** | Ranking treinado com pedidos simulados e comparado com a V1 por métricas offline | 📌 Planejado |
+| 📈 **Modelo de ML (V2)** | Modelo treinado (scikit-learn + MLflow) para gerar um `score_v2` ao lado do `score_v1`, comparado por métricas offline | 📌 Melhoria planejada |
+
+### ✍️ Como o LLM entra no pipeline
+
+O notebook `14` seleciona as melhores recomendações de `recommendations_today` (até 3 por zona, no máximo 200 linhas por execução, para respeitar a cota) e chama o LLM em batch com `ai_query`. O resultado vira a tabela `recommendations_explained`.
+
+- 🔒 O prompt usa **só os dados da linha** (clima, restaurante, categoria, bairro e se está aberto) e proíbe inventar prato, nota, preço, tempo de entrega ou distância
+- 🧯 A chamada usa `failOnError => false`, então uma linha com erro não derruba o lote
+- 🛡️ **Guarda de qualidade:** respostas vazias, longas demais ou que citem nota, avaliação, preço ou entrega são descartadas
+- 📝 Linhas descartadas recebem uma explicação por **template**. A coluna `fonte_explicacao` mostra `llm` ou `template`, e `llm_endpoint` registra o modelo usado
+- 🧱 Se nenhuma resposta do LLM for aproveitada, o notebook falha e **não sobrescreve** a última versão boa da tabela
+- 🔁 O modelo fica numa única variável (`LLM_ENDPOINT`), então trocar de modelo é mudar uma linha
 
 ### 🔎 Exemplos de perguntas para o agente
 
@@ -114,6 +131,7 @@ A camada de IA fica **em cima** das tabelas Gold. Ela não substitui o pipeline,
 - 🔒 A IA consulta **tabelas governadas** no Unity Catalog, com o SQL visível para conferência
 - 🧪 As respostas serão validadas com perguntas de teste antes de qualquer uso
 - ⚠️ A IA só sabe o que está nos dados: o projeto declara abertamente o que é real, o que é hipótese e o que é simulado
+- 🛡️ As explicações do LLM passam por uma guarda de qualidade e têm fallback por template
 
 ---
 
@@ -126,6 +144,7 @@ As APIs abertas dizem **onde** o restaurante está e **que tipo de comida** ele 
 3. 💞 **Afinidade clima x categoria:** nota de 0 a 1 definida pelo projeto
 4. 🕐 **Aberto agora:** parser do `opening_hours` do OpenStreetMap (fechado sai, desconhecido tem peso menor)
 5. 📍 **Proximidade:** a função `recomendar(lat, lon)` pondera pela distância do usuário
+6. ✍️ **Explicação:** um LLM escreve uma frase ligando o clima ao restaurante recomendado
 
 `score = afinidade × confiança da classificação × fator de horário × proximidade`
 
@@ -137,22 +156,28 @@ As APIs abertas dizem **onde** o restaurante está e **que tipo de comida** ele 
 - 🚫 **Rejeitados separados:** registros inválidos vão para tabelas `_rejected`, com o motivo
 - 🧪 **Validações no código:** `assert` nos notebooks Gold fazem a task falhar se algo estiver errado
 - 📊 **Resultado atual:** 5.006 restaurantes únicos na Silver, sem duplicados e com 17,9% em `geral` (sem pista de comida no nome ou na cozinha)
+- 🛡️ **IA com guarda de qualidade:** respostas do LLM fora do padrão viram template, e a tabela final só é sobrescrita se o LLM responder
 - 🔔 **Alertas:** e-mail em caso de falha ou de duração acima do esperado
 
 ---
 
 ## ⚙️ Orquestração
 
-Job `Weather_food_daily`, com 5 tasks em sequência:
+**Job `Weather_food_daily`**, com 6 tasks em sequência:
 
 ```
-Ingest_clima → silver_clima → gold_clima → gold_scores → gold_recomendacoes_hoje
+Ingest_clima → silver_clima → gold_clima → gold_scores → gold_recomendacoes_hoje → ai_explicacoes
 ```
 
-- ⏱️ Execução completa em cerca de **5 minutos**
+**Job `Weather_food_restaurants_weekly`**, com 3 tasks em sequência:
+
+```
+bronze_locais → silver_locais → gold_locais
+```
+
 - 🕖 Agendamento diário por cron, com fuso `America/Sao_Paulo`
 - 🔄 Retry na ingestão, que depende de API externa
-- 🍽️ Restaurantes mudam pouco, então ficam num job semanal separado (ver roadmap)
+- 🍽️ Restaurantes mudam pouco, então ficam num job semanal separado. O job diário sempre lê a versão mais recente
 
 ---
 
@@ -163,18 +188,20 @@ Ingest_clima → silver_clima → gold_clima → gold_scores → gold_recomendac
 - [x] Bronze de clima e de restaurantes
 - [x] Silver com Data Quality, tabelas de rejeitados e `MERGE`
 - [x] Gold: tags de clima, afinidade, scores e recomendações do dia
-- [x] Job diário com 5 tasks, agendamento e alertas por e-mail
+- [x] Job diário, agendamento e alertas por e-mail
+- [x] Job semanal dos restaurantes
 - [x] Descrições das tabelas no Unity Catalog para o Genie
+- [x] 🤖 LLM no pipeline (`ai_query`) gerando explicações, como task do job diário
 
 ### 🔄 Em andamento
 - [ ] 🤖 Genie Agent sobre as tabelas Gold (instruções, SQLs de exemplo e perguntas de teste)
 
-### 📌 Próximos passos
-- [ ] Task `12_gold_genie_metadata` no job, para reaplicar as descrições após cada regravação
-- [ ] Job semanal dos restaurantes (`05` e `07`)
-- [ ] 🤖 Agente em código que usa o Genie e a função de recomendação como ferramentas, e explica a sugestão em linguagem natural
+### 📌 Próximos passos e melhorias
 - [ ] 🧪 Avaliação do agente com perguntas de teste e resposta esperada
-- [ ] 🤖 Pedidos simulados + modelo de ML **V2**, comparado com a V1 (regras)
+- [ ] 🤖 Agente em código que usa o Genie e a função de recomendação como ferramentas
+- [ ] 📈 **Machine Learning avançado (score V2):** treinar um modelo (scikit-learn + MLflow) que gere um `score_v2` ao lado do `score_v1`, separando treino e teste por restaurante
+- [ ] 🛒 Pedidos simulados ou feedback real como alvo de treino do V2, para ele ir além de reproduzir a regra da V1
+- [ ] Task `12_gold_genie_metadata` no job, para reaplicar as descrições após cada regravação
 - [ ] Dashboard (AI/BI)
 - [ ] Demo em vídeo curto
 
@@ -187,6 +214,7 @@ Ingest_clima → silver_clima → gold_clima → gold_scores → gold_recomendac
 | 🌡️ Clima | **Real** (Open-Meteo) |
 | 🍴 Restaurantes | **Real** (OpenStreetMap) |
 | 💞 Afinidade clima x comida | **Hipótese do projeto**, não é dado observado |
+| ✍️ Explicações das recomendações | **Geradas por LLM** a partir dos dados da linha, com fallback por template |
 | 🛒 Pedidos e preferências (V2) | **Simulados**, só para treinar e demonstrar |
 
 O OpenStreetMap não traz nota nem popularidade. Por isso a V1 é baseada em regras, e não em avaliação de clientes. Horário de funcionamento e tipo de cozinha também podem estar ausentes, e a Silver trata esses casos.
@@ -199,6 +227,7 @@ O OpenStreetMap não traz nota nem popularidade. Por isso a V1 é baseada em reg
 - ⏱️ Cota de compute: se estourar, o processamento pausa até renovar
 - 🌐 Acesso à internet restrito a domínios permitidos (Open-Meteo e Overpass funcionam)
 - 🖥️ Um único SQL warehouse pequeno, então evito rodar o job e o Genie ao mesmo tempo
+- ✍️ O LLM roda em lote com limite de 200 linhas por execução, para respeitar a cota
 - 📍 Escopo atual: **uma cidade (São Paulo)**
 
 ---
@@ -209,8 +238,8 @@ O OpenStreetMap não traz nota nem popularidade. Por isso a V1 é baseada em reg
 2. ☁️ Crie uma conta no [Databricks Free Edition](https://www.databricks.com/learn/free-edition)
 3. 🔗 Em **Settings → Linked accounts**, conecte o GitHub e instale o app no repositório
 4. 📂 Em **Workspace → Create → Git folder**, clone o repositório
-5. ▶️ Execute os notebooks na ordem numérica (03 a 12)
-6. ⚙️ Crie o job com as 5 tasks na ordem da seção de orquestração
+5. ▶️ Execute os notebooks na ordem numérica (03 a 14). Antes do `14`, rode o `13` e ajuste `LLM_ENDPOINT` para um modelo disponível no seu workspace
+6. ⚙️ Crie o job diário com as 6 tasks e o job semanal com as 3 tasks, na ordem da seção de orquestração
 
 ---
 
