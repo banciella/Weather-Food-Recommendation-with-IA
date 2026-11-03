@@ -1,6 +1,6 @@
 <div align="center">
 
-# 🌦️🍕 Weather Food Recommendation
+# 🌦️🍕 Weather Food Recommendation with IA
 
 ### Pipeline de Engenharia de Dados + IA no Databricks que recomenda comida de acordo com o clima
 
