@@ -34,19 +34,20 @@ Só que IA boa depende de **dado bom**. Um modelo ou um agente não consegue rec
 ## 🏗️ Arquitetura
 
 ```mermaid
-flowchart LR
+flowchart TB
   A["🌤️ Open-Meteo<br/>clima"] --> B
-  C["🗺️ OpenStreetMap<br/>Overpass API<br/>restaurantes e locais"] --> B
-  B["🥉 Bronze<br/>JSON bruto em Volume"] --> D["🥈 Silver<br/>Delta limpo<br/>+ Data Quality"]
-  D --> E["🥇 Gold<br/>tags de clima, scores<br/>e recomendações"]
+  C["🗺️ OpenStreetMap<br/>restaurantes e locais"] --> B
+  B["🥉 Bronze<br/>JSON bruto"] --> D["🥈 Silver<br/>Delta limpo<br/>+ Data Quality"]
+  D --> E["🥇 Gold<br/>clima, scores<br/>e recomendações"]
   E --> F["📋 recommendations_today"]
-  F --> G["✍️ LLM no pipeline<br/>ai_query<br/>recommendations_explained"]
-  F --> I["🧰 Função SQL<br/>recomendar_por_local"]
+  F --> G["✍️ ai_query<br/>explicações"]
+  F --> I["🧰 recomendar<br/>_por_local"]
   E --> H["🤖 Genie Agent<br/>linguagem natural"]
   G --> H
   I --> H
-  J["⏰ Databricks Jobs<br/>diário + semanal<br/>alertas por e-mail"] -.-> B
 ```
+
+⏰ Tudo roda orquestrado pelos **Databricks Jobs** (diário e semanal), com alertas por e-mail.
 
 ### 🧱 Camadas (Arquitetura Medalhão)
 
@@ -162,8 +163,8 @@ As APIs abertas dizem **onde** o restaurante está e **que tipo de comida** ele 
 6. ✍️ **Explicação:** um LLM escreve uma frase ligando o clima ao restaurante recomendado
 
 ```
-score_base = afinidade × confiança da classificação
-score_v1   = score_base × fator de horário
+score_base  = afinidade × confiança da classificação
+score_v1    = score_base × fator de horário
 score_final = score_v1 × proximidade
 ```
 
@@ -257,7 +258,7 @@ O OpenStreetMap não traz nota nem popularidade. Por isso o score é baseado em 
 4. 📂 Em **Workspace → Create → Git folder**, clone o repositório
 5. ▶️ Execute os notebooks na ordem numérica (03 a 18). Antes do `14`, rode o `13` e ajuste `LLM_ENDPOINT` para um modelo disponível no seu workspace
 6. ⚙️ Crie o job diário com as 6 tasks e o job semanal com as 3 tasks, na ordem da seção de orquestração
-7. 💬 Crie um Genie Agent apontando para as tabelas Gold e adicione a função `recomendar_por_local` como ferramenta
+7. 💬 Crie um Genie Agent apontando para as tabelas Gold e adicione a função `recomendar_por_local` como ferramenta. O agente não vai no Git folder, então precisa ser recriado no workspace
 
 ---
 
