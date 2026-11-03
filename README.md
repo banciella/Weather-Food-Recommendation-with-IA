@@ -30,10 +30,10 @@ Só que IA boa depende de **dado bom**. Um modelo ou um agente não consegue rec
 💡 **A ideia central:** o pipeline entrega o dado pronto e confiável, e a IA trabalha em cima dele. Assim a resposta é rastreável até a tabela de origem, o que reduz o risco de a IA inventar informação.
 
 ---
-## 🏗️ Arquitetura
 
-docs/arquitetura.png
+arquitetura.png
 
+---
 
 ### 🧱 Camadas (Arquitetura Medalhão)
 
