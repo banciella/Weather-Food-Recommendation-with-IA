@@ -32,29 +32,7 @@ Só que IA boa depende de **dado bom**. Um modelo ou um agente não consegue rec
 ---
 ## 🏗️ Arquitetura
 
-```mermaid
-flowchart TD
-    A["Open-Meteo<br/>clima"]
-    B["OSM<br/>restaurantes"]
-    C["Bronze<br/>JSON bruto"]
-    D["Silver<br/>Delta limpo<br/>+ Data Quality"]
-    E["Gold<br/>clima, scores<br/>e recomendações"]
-    F["recommenda"]
-    G["ai_query<br/>explicações"]
-    H["recomendar<br/>por_local"]
-    I["Genie Agent<br/>linguagem<br/>natural"]
-
-    A --> C
-    B --> C
-    C --> D
-    D --> E
-    E --> F
-    E --> I
-    F --> G
-    F --> H
-    G --> I
-    H --> I
-```
+docs/arquitetura.png
 
 
 ### 🧱 Camadas (Arquitetura Medalhão)
