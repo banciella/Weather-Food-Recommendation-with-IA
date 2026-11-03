@@ -33,19 +33,7 @@ Só que IA boa depende de **dado bom**. Um modelo ou um agente não consegue rec
 
 ## 🏗️ Arquitetura
 
-```mermaid
-flowchart TB
-  A["🌤️ Open-Meteo<br/>clima"] --> B
-  C["🗺️ OpenStreetMap<br/>restaurantes e locais"] --> B
-  B["🥉 Bronze<br/>JSON bruto"] --> D["🥈 Silver<br/>Delta limpo<br/>+ Data Quality"]
-  D --> E["🥇 Gold<br/>clima, scores<br/>e recomendações"]
-  E --> F["📋 recommendations_today"]
-  F --> G["✍️ ai_query<br/>explicações"]
-  F --> I["🧰 recomendar<br/>_por_local"]
-  E --> H["🤖 Genie Agent<br/>linguagem natural"]
-  G --> H
-  I --> H
-```
+```mermaid %%{init: {'flowchart': {'nodeSpacing': 25, 'rankSpacing': 35}}}%% flowchart TD A["Open-Meteo<br/>clima"] B["OSM<br/>restaurantes"] C["Bronze<br/>JSON bruto"] D["Silver<br/>Delta limpo<br/>+ Data Quality"] E["Gold<br/>clima, scores<br/>e recomendações"] F["recommenda"] G["ai_query<br/>explicações"] H["recomendar<br/>por_local"] I["Genie Agent<br/>linguagem<br/>natural"] A --> C B --> C C --> D D --> E E --> F E --> I F --> G F --> H G --> I H --> I ```
 
 ⏰ Tudo roda orquestrado pelos **Databricks Jobs** (diário e semanal), com alertas por e-mail.
 
