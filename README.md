@@ -30,12 +30,32 @@ Só que IA boa depende de **dado bom**. Um modelo ou um agente não consegue rec
 💡 **A ideia central:** o pipeline entrega o dado pronto e confiável, e a IA trabalha em cima dele. Assim a resposta é rastreável até a tabela de origem, o que reduz o risco de a IA inventar informação.
 
 ---
-
 ## 🏗️ Arquitetura
 
-```mermaid %%{init: {'flowchart': {'nodeSpacing': 25, 'rankSpacing': 35}}}%% flowchart TD A["Open-Meteo<br/>clima"] B["OSM<br/>restaurantes"] C["Bronze<br/>JSON bruto"] D["Silver<br/>Delta limpo<br/>+ Data Quality"] E["Gold<br/>clima, scores<br/>e recomendações"] F["recommenda"] G["ai_query<br/>explicações"] H["recomendar<br/>por_local"] I["Genie Agent<br/>linguagem<br/>natural"] A --> C B --> C C --> D D --> E E --> F E --> I F --> G F --> H G --> I H --> I ```
+```mermaid
+flowchart TD
+    A["Open-Meteo<br/>clima"]
+    B["OSM<br/>restaurantes"]
+    C["Bronze<br/>JSON bruto"]
+    D["Silver<br/>Delta limpo<br/>+ Data Quality"]
+    E["Gold<br/>clima, scores<br/>e recomendações"]
+    F["recommenda"]
+    G["ai_query<br/>explicações"]
+    H["recomendar<br/>por_local"]
+    I["Genie Agent<br/>linguagem<br/>natural"]
 
-⏰ Tudo roda orquestrado pelos **Databricks Jobs** (diário e semanal), com alertas por e-mail.
+    A --> C
+    B --> C
+    C --> D
+    D --> E
+    E --> F
+    E --> I
+    F --> G
+    F --> H
+    G --> I
+    H --> I
+```
+
 
 ### 🧱 Camadas (Arquitetura Medalhão)
 
