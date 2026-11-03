@@ -250,8 +250,7 @@ O OpenStreetMap não traz nota nem popularidade. Por isso o score é baseado em 
 
 ## 👤 Autor
 
-**Felipe Banciella**
-🔗 [github.com/banciella](https://github.com/banciella)
+[Felipe Banciella | LinkedIn](https://www.linkedin.com/in/banciella/)
 
 ---
 
