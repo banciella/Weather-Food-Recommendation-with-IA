@@ -31,7 +31,7 @@ Só que IA boa depende de **dado bom**. Um modelo ou um agente não consegue rec
 
 ---
 
-arquitetura.png
+<p align="center"><img src="arquitetura.png" alt="Arquitetura do projeto" width="450"></p>
 
 ---
 
